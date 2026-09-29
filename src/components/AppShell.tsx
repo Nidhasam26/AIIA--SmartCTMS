@@ -1,4 +1,4 @@
-import { Bell, LogOut, Moon, ShieldCheck, Sun, UserCircle2 } from 'lucide-react'
+import { Bell, BellOff, LogOut, Moon, ShieldCheck, Sun, UserCircle2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { users } from '../data/seed'
@@ -124,13 +124,20 @@ export function AppShell() {
                 <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-3 shadow-xl backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/95">
                   <div className="mb-2 text-sm font-semibold text-slate-900 dark:text-slate-100">Alert centre</div>
                   <div className="space-y-2">
-                    {visibleAlerts.map((alert) => (
-                      <div key={alert.id} className="rounded-lg border border-slate-200 bg-slate-50/50 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-800/60">
-                        <div className="font-semibold text-slate-800 dark:text-slate-200">{alert.title}</div>
-                        <div className="mt-1 text-slate-500 dark:text-slate-400">{alert.description}</div>
-                        {alert.evidence && <div className="mt-1 text-slate-500 dark:text-slate-400">Evidence: {alert.evidence}</div>}
+                    {visibleAlerts.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-500 flex flex-col items-center justify-center gap-1.5 dark:text-slate-400">
+                        <BellOff size={18} className="text-teal-500" />
+                        <span>No current alerts</span>
                       </div>
-                    ))}
+                    ) : (
+                      visibleAlerts.map((alert) => (
+                        <div key={alert.id} className="rounded-lg border border-slate-200 bg-slate-50/50 p-2.5 text-xs dark:border-slate-800 dark:bg-slate-800/60">
+                          <div className="font-semibold text-slate-800 dark:text-slate-200">{alert.title}</div>
+                          <div className="mt-1 text-slate-500 dark:text-slate-400">{alert.description}</div>
+                          {alert.evidence && <div className="mt-1 text-slate-500 dark:text-slate-400">Evidence: {alert.evidence}</div>}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}

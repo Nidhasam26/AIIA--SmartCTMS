@@ -163,7 +163,7 @@ export function MonitoringPage() {
           </div>
           <div className="flex items-center gap-2 text-xs font-semibold text-teal-800 dark:text-teal-300 bg-teal-100/70 dark:bg-teal-950/50 px-3 py-1.5 rounded-lg border border-teal-200/80 dark:border-teal-900/40">
             <CheckCircle size={14} />
-            <span>Site Activated & Certified</span>
+            <span>Site Activated & Standards-Aligned</span>
           </div>
         </div>
 

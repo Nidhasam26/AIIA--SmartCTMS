@@ -45,6 +45,7 @@ interface AppState {
   updateAuditEntry: (id: string, changes: Partial<AuditEntry>) => void
   setKpiConfig: (config: KPIConfig, reason: string) => Promise<void>
   updateStudy: (studyId: string, changes: Partial<Study>, reason: string) => Promise<void>
+  logESignature: (entity: string, recordId: string, statement: string, reason: string) => Promise<void>
   setRuleConfig: (config: RuleConfig) => void
   resetDemoData: () => void
 }
@@ -258,6 +259,22 @@ export const useAppStore = create<AppState>()(persist((set, get) => {
   updateAuditEntry: (id, changes) => set((state) => ({
     auditEntries: state.auditEntries.map((entry) => entry.id === id ? { ...entry, ...changes } : entry),
   })),
+  logESignature: (entity, recordId, statement, reason) => commitAuditedWrite({
+    entity: `${entity}:${recordId}`,
+    action: 'ELECTRONIC_SIGNATURE',
+    oldValue: () => 'Unsigned',
+    newValue: (state) => {
+      const user = state.users.find((u) => u.id === state.activeUserId)
+      const actorName = user ? user.name : state.activeRole
+      return JSON.stringify({
+        signedBy: actorName,
+        role: state.activeRole,
+        statement,
+        timestamp: new Date().toISOString(),
+      })
+    },
+    reason,
+  }, () => ({})),
   setKpiConfig: (config, reason) => commitAuditedWrite({
     entity: 'portfolio-kpi-config',
     action: 'Update KPI thresholds',

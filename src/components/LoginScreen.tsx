@@ -5,10 +5,12 @@ import {
   BarChart3,
   CheckCircle,
   ClipboardList,
-  Eye,
+  FileSearch,
   KeyRound,
+  Landmark,
   Lock,
   Mail,
+  Scale,
   Settings,
   ShieldCheck,
   Stethoscope,
@@ -38,16 +40,18 @@ function getRoleIcon(role: string) {
       return <Stethoscope size={15} className="shrink-0 text-teal-400" />
     case 'Study Coordinator':
       return <ClipboardList size={15} className="shrink-0 text-teal-400" />
+    case 'Monitor (CRA)':
+      return <FileSearch size={15} className="shrink-0 text-teal-400" />
     case 'Ethics Committee (IEC)':
       return <ShieldCheck size={15} className="shrink-0 text-teal-400" />
     case 'PV Officer':
       return <Activity size={15} className="shrink-0 text-teal-400" />
+    case 'DSMB':
+      return <Scale size={15} className="shrink-0 text-teal-400" />
     case 'Leadership':
       return <BarChart3 size={15} className="shrink-0 text-teal-400" />
-    case 'Monitor (CRA)':
-    case 'DSMB':
     case 'Regulator':
-      return <Eye size={15} className="shrink-0 text-teal-400" />
+      return <Landmark size={15} className="shrink-0 text-teal-400" />
     case 'System Admin':
       return <Settings size={15} className="shrink-0 text-teal-400" />
     default:

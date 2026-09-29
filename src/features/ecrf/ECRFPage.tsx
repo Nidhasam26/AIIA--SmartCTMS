@@ -186,7 +186,7 @@ export function ECRFPage() {
           <div className="text-[10px] font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">Data Capture</div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Electronic Case Report Forms (eCRF)</h1>
           <p className="text-xs text-slate-500 mt-1">
-            GCP-compliant clinical data capture for baseline visits, Ayurvedic Prakriti assessment, and treatment follow-ups.
+            Standards-aligned clinical data capture for baseline visits, Ayurvedic Prakriti assessment, and treatment follow-ups.
           </p>
         </div>
 
@@ -316,7 +316,7 @@ export function ECRFPage() {
             </p>
           </div>
           <span className="rounded-md border border-slate-200 px-2.5 py-1 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            GCP-ASU eSource Compliant
+            GCP-ASU eSource Standards-Aligned
           </span>
         </div>
 

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../../store/appStore'
 import { createSaeDeadlines, getSaeCountdownText, getSaeDeadlineStatus, getSaeDeadlines, hasSaeDeadlineExpired } from '../../lib/sae'
+import { ESignatureModal } from '../../components/ESignatureModal'
+import { FileCheck } from 'lucide-react'
 import type { AdverseEvent } from '../../types'
 
 export function SafetyPage() {
@@ -51,46 +53,79 @@ export function SafetyPage() {
     }
   }, [adverseEvents, addAlert, now, ruleConfig, updateAdverseEvent])
 
-  const fileSae = async () => {
+  const [isEsignOpen, setIsEsignOpen] = useState(false)
+  const [pendingAction, setPendingAction] = useState<{
+    type: 'create' | 'resolve'
+    event?: AdverseEvent
+    nextAeId?: string
+  } | null>(null)
+
+  const initiateFiling = () => {
     if (!filingReason.trim()) {
       setFilingError('Enter a reason for filing this SAE.')
       return
     }
-    const onsetDate = new Date().toISOString()
-    const deadlines = createSaeDeadlines(onsetDate, ruleConfig)
-    const ae: AdverseEvent = {
-      id: `AE-${String(adverseEvents.length + 1).padStart(3, '0')}`,
-      studyId: 'study-1',
-      subjectId: form.subjectId,
-      reporter: 'Investigator',
-      event: form.event,
-      seriousness: form.seriousness,
-      onsetDate,
-      outcome: 'Follow-up required',
-      causality: 'Probable',
-      status: 'Open',
-      requiredRecipients: ['Investigator', 'PV Officer', 'IEC'],
-      dueAt: deadlines.investigator,
-      deadlines,
-      escalated: false,
+    setFilingError('')
+    const nextId = `AE-${String(adverseEvents.length + 1).padStart(3, '0')}`
+    setPendingAction({ type: 'create', nextAeId: nextId })
+    setIsEsignOpen(true)
+  }
+
+  const initiateResolve = (event: AdverseEvent) => {
+    setPendingAction({ type: 'resolve', event })
+    setIsEsignOpen(true)
+  }
+
+  const handleEsignConfirm = async (data: { password: string; statement: string; timestamp: string; reason: string }) => {
+    if (!pendingAction) return
+
+    if (pendingAction.type === 'create') {
+      const onsetDate = new Date().toISOString()
+      const deadlines = createSaeDeadlines(onsetDate, ruleConfig)
+      const ae: AdverseEvent = {
+        id: pendingAction.nextAeId || `AE-${String(adverseEvents.length + 1).padStart(3, '0')}`,
+        studyId: 'study-1',
+        subjectId: form.subjectId,
+        reporter: 'Investigator',
+        event: form.event,
+        seriousness: form.seriousness,
+        onsetDate,
+        outcome: 'Follow-up required',
+        causality: 'Probable',
+        status: 'Open',
+        requiredRecipients: ['Investigator', 'PV Officer', 'IEC'],
+        dueAt: deadlines.investigator,
+        deadlines,
+        escalated: false,
+      }
+
+      await addAdverseEvent(ae, data.reason || filingReason.trim())
+      setFilingReason('')
+      setFilingError('')
+      if (ae.seriousness === 'Serious') {
+        addAlert({
+          id: `ALT-${Date.now()}`,
+          studyId: 'study-1',
+          title: 'SAE reporting deadline',
+          description: 'Serious event requires reporting to PV and IEC within 24 hours.',
+          severity: 'critical',
+          acknowledged: false,
+          rule: 'sae_reporting',
+          evidence: `${ae.subjectId} - ${ae.event}`,
+          suggestedAction: 'Submit urgent safety report and escalate if missed.',
+          createdAt: new Date().toISOString(),
+          role: 'PV Officer',
+        })
+      }
+    } else if (pendingAction.type === 'resolve' && pendingAction.event) {
+      await updateAdverseEvent(
+        pendingAction.event.id,
+        { status: 'Resolved' },
+        data.reason || 'Safety report reviewed, reconciled, and finalized with electronic signature'
+      )
     }
 
-    await addAdverseEvent(ae, filingReason.trim())
-    setFilingReason('')
-    setFilingError('')
-    if (ae.seriousness === 'Serious') addAlert({
-      id: `ALT-${Date.now()}`,
-      studyId: 'study-1',
-      title: 'SAE reporting deadline',
-      description: 'Serious event requires reporting to PV and IEC within 24 hours.',
-      severity: 'critical',
-      acknowledged: false,
-      rule: 'sae_reporting',
-      evidence: `${ae.subjectId} - ${ae.event}`,
-      suggestedAction: 'Submit urgent safety report and escalate if missed.',
-      createdAt: new Date().toISOString(),
-      role: 'PV Officer',
-    })
+    setPendingAction(null)
   }
 
   const forceMissedDeadline = async (event: AdverseEvent) => {
@@ -185,7 +220,13 @@ export function SafetyPage() {
             <input aria-label="Reason for SAE filing" value={filingReason} onChange={(event) => setFilingReason(event.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 dark:border-slate-700/80 dark:bg-slate-900 dark:text-slate-100" />
           </label>
           {filingError && <p role="alert" className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-400">{filingError}</p>}
-          <button onClick={fileSae} className="mt-3.5 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 transition">File SAE</button>
+          <button
+            onClick={initiateFiling}
+            className="mt-3.5 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-teal-500 transition flex items-center gap-2 cursor-pointer"
+          >
+            <FileCheck size={16} />
+            <span>File & E-Sign SAE</span>
+          </button>
         </div>
       )}
 
@@ -196,7 +237,7 @@ export function SafetyPage() {
         </div>
       ))}
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white/95 shadow-sm backdrop-blur-sm dark:border-slate-800/80 dark:bg-[#0d141c]/80">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white/95 shadow-xs backdrop-blur-xs dark:border-slate-800/80 dark:bg-[#0d141c]/80">
         <table className="min-w-full divide-y divide-slate-200 text-left text-sm dark:divide-slate-800">
           <thead className="bg-slate-50 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
             <tr>
@@ -207,7 +248,7 @@ export function SafetyPage() {
               <th className="px-4 py-3 font-medium">Sponsor countdown</th>
               <th className="px-4 py-3 font-medium">IEC countdown</th>
               <th className="px-4 py-3 font-medium">Status</th>
-              {activeRole === 'Principal Investigator' && <th className="px-4 py-3 font-medium">Development</th>}
+              {activeRole === 'Principal Investigator' && <th className="px-4 py-3 font-medium">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white dark:divide-slate-800 dark:bg-slate-900/60">
@@ -250,11 +291,20 @@ export function SafetyPage() {
                     </span>
                   </td>
                   {activeRole === 'Principal Investigator' && (
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 flex items-center gap-2">
+                      {event.status !== 'Resolved' && (
+                        <button
+                          onClick={() => initiateResolve(event)}
+                          className="rounded-lg border border-teal-300 bg-teal-50/60 px-2.5 py-1 text-xs font-medium text-teal-700 hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-300 dark:hover:bg-teal-900/60 transition flex items-center gap-1 cursor-pointer"
+                        >
+                          <FileCheck size={13} />
+                          <span>Finalize & Sign</span>
+                        </button>
+                      )}
                       <button
                         disabled={event.escalated}
                         onClick={() => forceMissedDeadline(event)}
-                        className="rounded-lg border border-rose-300 px-2.5 py-1 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/30 transition"
+                        className="rounded-lg border border-rose-300 px-2.5 py-1 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/30 transition cursor-pointer"
                       >
                         Force missed deadline
                       </button>
@@ -266,6 +316,19 @@ export function SafetyPage() {
           </tbody>
         </table>
       </div>
+
+      <ESignatureModal
+        isOpen={isEsignOpen}
+        onClose={() => {
+          setIsEsignOpen(false)
+          setPendingAction(null)
+        }}
+        onConfirm={handleEsignConfirm}
+        title={pendingAction?.type === 'resolve' ? 'Finalize & Sign Safety Report' : 'Electronic Signature - SAE Intake'}
+        entityName="AdverseEvent"
+        recordId={pendingAction?.type === 'resolve' ? pendingAction.event?.id : pendingAction?.nextAeId}
+        defaultReason={pendingAction?.type === 'resolve' ? 'Finalizing resolved clinical safety report' : (filingReason || 'Reporting serious adverse event in compliance with ASU standards')}
+      />
     </div>
   )
 }
